@@ -14,7 +14,7 @@ const SlidePlayer = () => {
     const fetchConfig = async () => {
       try {
         const response = await fetch('/config.json');
-        //const response = await fetch('http://192.168.29.137:8000/api/getfiles');
+        //const response = await fetch('http://34.229.246.17/admin/api/getfiles');
         if (!response.ok) throw new Error("Failed to get model from S3 Bucket.");
         const data = await response.json();
         setConfig(data);

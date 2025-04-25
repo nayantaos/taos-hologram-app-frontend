@@ -154,7 +154,7 @@ const ThreeDSlide = ({ slide, isActive }: ThreeDSlideProps) => {
 
         {/* Controls */}
         <OrbitControls
-          ref={orbitRef}
+          //ref={orbitRef}
           target={[0, 0, 0]}
           autoRotate={false}
           autoRotateSpeed={1}
