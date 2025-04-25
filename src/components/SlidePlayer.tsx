@@ -3,7 +3,7 @@ import { SlidePlayerConfig } from "@/types/slide";
 import ThreeDSlide from "./ThreeDSlide";
 import VideoSlide from "./VideoSlide";
 
-const SlidePlayer = () => {
+const SlidePlayer = ({ slug }) => {
   const [config, setConfig] = useState<SlidePlayerConfig | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -12,8 +12,11 @@ const SlidePlayer = () => {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      try {
-        const response = await fetch('/config.json');
+      try {       
+        
+        console.log(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
+        //const response = await fetch('/config.json');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
         //const response = await fetch('http://34.229.246.17/admin/api/getfiles');
         if (!response.ok) throw new Error("Failed to get model from S3 Bucket.");
         const data = await response.json();
