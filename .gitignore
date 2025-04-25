@@ -26,3 +26,5 @@ dist-ssr
 # Ignore all files inside public/models and public/videos
 /public/models/*
 /public/videos/*
+
+.env
