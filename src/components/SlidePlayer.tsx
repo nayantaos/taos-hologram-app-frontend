@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { SlidePlayerConfig } from "@/types/slide";
 import ThreeDSlide from "./ThreeDSlide";
 import VideoSlide from "./VideoSlide";
+import NotFound from "@/pages/NotFound";
 
 const SlidePlayer = ({ slug }) => {
   const [config, setConfig] = useState<SlidePlayerConfig | null>(null);
@@ -9,22 +10,26 @@ const SlidePlayer = ({ slug }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [fadeOut, setFadeOut] = useState<boolean>(false);
+  
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {       
-        
-        console.log(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
         //const response = await fetch('/config.json');
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
-        //const response = await fetch('http://34.229.246.17/admin/api/getfiles');
+
+        if (response.status === 404) {
+          <NotFound />
+          return; // stop further execution
+        }
+        
         if (!response.ok) throw new Error("Failed to get model from S3 Bucket.");
         const data = await response.json();
+               
         setConfig(data);
-        console.log(data);
       } catch (err) {
         setError("Error loading : " + (err instanceof Error ? err.message : String(err)));
-        console.error("Error loading configuration:", err);
+        <NotFound />
       } finally {
         setLoading(false);
       }

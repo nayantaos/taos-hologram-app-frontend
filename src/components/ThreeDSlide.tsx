@@ -1,84 +1,104 @@
 import { useEffect, useRef, useState, Suspense, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
-  OrbitControls,
   useGLTF,
   useAnimations,
   Environment,
   Html,
+  OrbitControls,
 } from "@react-three/drei";
 import * as THREE from "three";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SlideConfig } from "@/types/slide";
-
-useGLTF.preload;
-
+ 
 interface ModelProps {
   filePath: string;
   onLoad?: () => void;
   onError?: () => void;
 }
-
+ 
 function Model({ filePath, onLoad, onError }: ModelProps) {
   const group = useRef<THREE.Group>(null!);
   const { scene, animations } = useGLTF(filePath);
   const { actions } = useAnimations(animations, group);
-
+ 
   useEffect(() => {
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh) {
         object.castShadow = true;
-        object.receiveShadow = false;
+        object.receiveShadow = false; // Only the back wall will receive shadows
         if (object.material) {
           object.material.side = THREE.DoubleSide;
         }
       }
     });
-
+ 
+    // Center the model in the scene based on bounding box
+    const box = new THREE.Box3().setFromObject(scene);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    scene.position.sub(center); // Move model so its center is at origin
+ 
+    Optional: scale to fit camera view (uncomment if needed)
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 2 / maxDim;
+    scene.scale.setScalar(scale);
+ 
+    // Play animation if available
     if (animations.length > 0) {
       const animationName = Object.keys(actions)[0];
       const action = actions[animationName];
       if (action) action.play();
     }
-
+ 
     if (onLoad) {
       const timer = setTimeout(() => onLoad(), 100);
       return () => clearTimeout(timer);
     }
   }, [animations, actions, onLoad, scene]);
-
+ 
   return (
     <group ref={group}>
-      <primitive
-        object={scene}
-        scale={1}
-        position={[0, 0, 0]}
-        rotation={[0, 0, 0]}
-      />
+      <primitive object={scene} />
     </group>
   );
 }
-
+ 
 interface ThreeDSlideProps {
   slide: SlideConfig;
   isActive: boolean;
 }
-
+ 
 const ThreeDSlide = ({ slide, isActive }: ThreeDSlideProps) => {
   const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState(true);
-  const orbitRef = useRef<any>(null);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  
+  const orbitRef = useRef<any>(null);
+  const wallRef = useRef<THREE.Mesh>(null);
+  const directionalLightRef = useRef<THREE.DirectionalLight>(null);
+ 
   const zoomLevel = isMobile ? slide?.zoom?.[0] ?? 5 : slide?.zoom?.[1] ?? 5;
   const cameraPosition = useMemo(() => new THREE.Vector3(0, 0, zoomLevel), [zoomLevel]);
   const cameraFov = isMobile ? 60 : 45;
-
+ 
   useEffect(() => {
     if (slide?.file) {
       useGLTF.preload(slide.file);
     }
   }, [slide?.file]);
-
+ 
+  useEffect(() => {
+    if (isActive) {
+      const interval = setInterval(() => {
+        
+      }, 16);
+      return () => clearInterval(interval);
+    }
+  }, [isActive]);
+ 
   const handleModelLoad = () => {
     if (isFirstLoad) {
       setTimeout(() => {
@@ -91,7 +111,7 @@ const ThreeDSlide = ({ slide, isActive }: ThreeDSlideProps) => {
       if (orbitRef.current) orbitRef.current.autoRotate = true;
     }
   };
-
+ 
   return (
     <div className="w-full h-full bg-white relative">
       {isFirstLoad && isLoading && (
@@ -103,18 +123,17 @@ const ThreeDSlide = ({ slide, isActive }: ThreeDSlideProps) => {
           />
         </div>
       )}
-
+ 
       <Canvas
         shadows
         camera={{ position: cameraPosition, fov: cameraFov }}
         gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
-        {/* Light that casts shadows */}
-        <ambientLight intensity={0.3} />
         <directionalLight
+          ref={directionalLightRef}
           castShadow
-          position={[5, 10, 5]}
-          intensity={1}
+          position={[0, 5, 10]}
+          intensity={1.2}
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-camera-near={1}
@@ -123,19 +142,21 @@ const ThreeDSlide = ({ slide, isActive }: ThreeDSlideProps) => {
           shadow-camera-right={15}
           shadow-camera-top={15}
           shadow-camera-bottom={-15}
-        />
-
-        {/* Ground Plane to catch shadows */}
-        <mesh
-          receiveShadow
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, -0.05, 0]}
         >
-          <planeGeometry args={[100, 100]} />
+          <primitive object={new THREE.Object3D()} position={[0, 2, -5]} />
+        </directionalLight>
+ 
+        {/* Static back wall to receive shadows */}
+        {/* <mesh
+          ref={wallRef}
+          receiveShadow
+          position={[0, 2.5, -2]}
+          rotation={[0, 0, 0]}
+        >
+          <planeGeometry args={[10, 10]} />
           <shadowMaterial transparent opacity={0.3} />
-        </mesh>
-
-        {/* Model */}
+        </mesh> */}
+ 
         <Suspense
           fallback={
             <Html center>
@@ -151,10 +172,10 @@ const ThreeDSlide = ({ slide, isActive }: ThreeDSlideProps) => {
             <Model filePath={slide.file} onLoad={handleModelLoad} />
           </group>
         </Suspense>
-
-        {/* Controls */}
+ 
+        <Environment preset="forest" />
         <OrbitControls
-          //ref={orbitRef}
+          ref={orbitRef}
           target={[0, 0, 0]}
           autoRotate={false}
           autoRotateSpeed={1}
@@ -163,12 +184,9 @@ const ThreeDSlide = ({ slide, isActive }: ThreeDSlideProps) => {
           maxPolarAngle={Math.PI / 2}
           minPolarAngle={Math.PI / 3}
         />
-
-        {/* Environment */}
-        <Environment preset="forest" />
       </Canvas>
     </div>
   );
 };
-
+ 
 export default ThreeDSlide;
