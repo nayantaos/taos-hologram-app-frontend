@@ -39,12 +39,12 @@ function Model({ filePath, onLoad, onError }: ModelProps) {
     box.getCenter(center);
     scene.position.sub(center); // Move model so its center is at origin
  
-    Optional: scale to fit camera view (uncomment if needed)
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 2 / maxDim;
-    scene.scale.setScalar(scale);
+    // Optional: scale to fit camera view (uncomment if needed)
+    // const size = new THREE.Vector3();
+    // box.getSize(size);
+    // const maxDim = Math.max(size.x, size.y, size.z);
+    // const scale = 2 / maxDim;
+    // scene.scale.setScalar(scale);
  
     // Play animation if available
     if (animations.length > 0) {
