@@ -15,8 +15,8 @@ const SlidePlayer = ({ slug }) => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {       
-        //const response = await fetch('/config.json');
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
+        const response = await fetch('/config.json');
+        //const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
 
         if (response.status === 404) {
           <NotFound />
@@ -62,22 +62,23 @@ const SlidePlayer = ({ slug }) => {
     </div>;
   }
 
+  
   if (loading || !config || config.files.length === 0) {
     return <div className="w-full h-screen flex items-center justify-center bg-black text-white">
       <p>Loading...</p>
     </div>;
   }
-
+  
   return (
     <div className="w-full h-screen overflow-hidden bg-black relative">
       {config.files.map((slide, index) => (
         <div
-          key={index}
-          className={`absolute inset-0 transition-opacity duration-500 ${index === currentSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'} ${fadeOut ? 'animate-fade-out' : 'animate-fade-in'}`}
-          style={{ display: index === currentSlideIndex ? 'block' : 'none' }}
+        key={index}
+        className={`absolute inset-0 transition-opacity duration-500 ${index === currentSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'} ${fadeOut ? 'animate-fade-out' : 'animate-fade-in'}`}
+        style={{ display: index === currentSlideIndex ? 'block' : 'none' }}
         >
           {slide.type === "3d" ? (
-            <ThreeDSlide slide={slide} isActive={index === currentSlideIndex} />
+            <ThreeDSlide slide={slide} company_logo={config.company_logo} isActive={index === currentSlideIndex} />
           ) : (
             <VideoSlide slide={slide} isActive={index === currentSlideIndex} />
           )}

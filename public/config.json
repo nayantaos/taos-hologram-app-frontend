@@ -1,0 +1,6 @@
+{   
+
+    "files": [
+      { "file": "/models/Skechers.glb", "rotation_time": 20, "type": "3d", "zoom": [0.8,0.8], "wall": [0.4, 2, -0.4], "Dlight": [4, 2, 10], "shadow_opacity": 0.2 }
+    ]
+  }
