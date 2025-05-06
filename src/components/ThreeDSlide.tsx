@@ -19,46 +19,53 @@ interface ModelProps {
 }
  
 function Model({ filePath, onLoad, onError }: ModelProps) {
-  const group = useRef<THREE.Group>(null!);
+  const outerGroup = useRef<THREE.Group>(null!);
   const { scene, animations } = useGLTF(filePath);
-  const { actions } = useAnimations(animations, group);
- 
+  const { actions } = useAnimations(animations, outerGroup);
+
   useEffect(() => {
     scene.traverse((object) => {
       if (object instanceof THREE.Mesh) {
         object.castShadow = true;
-        object.receiveShadow = false; // Only the back wall will receive shadows
+        object.receiveShadow = false;
         if (object.material) {
           object.material.side = THREE.DoubleSide;
         }
       }
     });
- 
-    // Center the model in the scene based on bounding box
+
+    // Center the model within a new container group
+    const centeredGroup = new THREE.Group();
     const box = new THREE.Box3().setFromObject(scene);
     const center = new THREE.Vector3();
     box.getCenter(center);
-    scene.position.sub(center); 
- 
-    // Play animation if available
+    scene.position.sub(center);
+    centeredGroup.add(scene);
+    console.log(scene);
+    
+
+    // Clear and re-add centeredGroup to outerGroup
+    outerGroup.current.clear();
+    outerGroup.current.add(centeredGroup);
+
+    // Start animation if available
     if (animations.length > 0) {
       const animationName = Object.keys(actions)[0];
       const action = actions[animationName];
       if (action) action.play();
     }
- 
+
+    // Notify on load
     if (onLoad) {
       const timer = setTimeout(() => onLoad(), 100);
       return () => clearTimeout(timer);
     }
   }, [animations, actions, onLoad, scene]);
- 
-  return (
-    <group ref={group}>
-      <primitive object={scene} />
-    </group>
-  );
+
+  return <group ref={outerGroup} />;
 }
+
+
  
 interface ThreeDSlideProps {
   company_logo?: string;
@@ -217,12 +224,17 @@ const ThreeDSlide = ({ slide, company_logo, isActive }: ThreeDSlideProps) => {
         />
         <spotLight
           position={slide.Dlight}
-          angle={Math.PI / 9}
-          penumbra={0.5}// adds softness to the spotlight edge
+          angle={0.5}
+          penumbra={3}
+          intensity={1}
+          distance={300}
+          decay={2}
           castShadow
-          intensity={0.2}
-          shadow-mapSize-width={5070}
-          shadow-mapSize-height={5070}
+          shadow-bias={-0.0005}
+          shadow-normalBias={0.05}
+          shadow-radius={20}
+          shadow-mapSize-width={3300}
+          shadow-mapSize-height={3300}
         />
         {/* <directionalLight
           ref={directionalLightRef}
@@ -243,6 +255,7 @@ const ThreeDSlide = ({ slide, company_logo, isActive }: ThreeDSlideProps) => {
           receiveShadow={true}
           position={slide.wall}
           rotation={[0, 0, 0]}
+          scale={[100, 101, 1]}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

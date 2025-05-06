@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import SlidePlayer from "@/components/SlidePlayer";
 
+
 const Index = () => {
   const { token } = useParams();
   console.log('ToKEN ======>',token);

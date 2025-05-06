@@ -3,6 +3,8 @@ import { SlidePlayerConfig } from "@/types/slide";
 import ThreeDSlide from "./ThreeDSlide";
 import VideoSlide from "./VideoSlide";
 import NotFound from "@/pages/NotFound";
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/20/solid'; // or 24/solid
+
 
 const SlidePlayer = ({ slug }) => {
   const [config, setConfig] = useState<SlidePlayerConfig | null>(null);
@@ -37,11 +39,24 @@ const SlidePlayer = ({ slug }) => {
     fetchConfig();
   }, []);
 
+  const goToPreviousSlide = useCallback(() => {
+    if (!config) return;
+    setFadeOut(true);
+    setTimeout(() => {
+      setCurrentSlideIndex((prevIndex) =>
+        prevIndex - 1 < 0 ? config.files.length - 1 : prevIndex - 1
+      );
+      setFadeOut(false);
+    }, 500);
+  }, [config]);
+
   const goToNextSlide = useCallback(() => {
     if (!config) return;
     setFadeOut(true);
     setTimeout(() => {
-      setCurrentSlideIndex((prevIndex) => (prevIndex + 1 >= config.files.length ? 0 : prevIndex + 1));
+      setCurrentSlideIndex((prevIndex) =>
+        (prevIndex + 1) % config.files.length
+      );
       setFadeOut(false);
     }, 500);
   }, [config]);
@@ -84,6 +99,24 @@ const SlidePlayer = ({ slug }) => {
           )}
         </div>
       ))}
+      <div className="absolute inset-y-0 inset-x-0 flex items-center justify-between z-50 px-4 pointer-events-none">
+        {/* Previous Button */}
+        <button
+          onClick={goToPreviousSlide}
+          className="p-2 text-black pointer-events-auto"
+        >
+          <ChevronLeftIcon className="w-10 h-10" />
+        </button>
+
+        {/* Next Button */}
+        <button
+          onClick={goToNextSlide}
+          className="p-2 text-black pointer-events-auto"
+        >
+          <ChevronRightIcon className="w-10 h-10" />
+        </button>
+      </div>
+
     </div>
   );
 };
