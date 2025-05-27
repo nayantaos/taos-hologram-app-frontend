@@ -21,7 +21,7 @@ const VideoSlide = ({ slide, isActive }: VideoSlideProps) => {
   }, [isActive]);
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-black">
+    <div className="w-full h-full flex items-center justify-center bg-transparent">
       <video
         ref={videoRef}
         src={slide.file}

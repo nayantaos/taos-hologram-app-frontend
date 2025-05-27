@@ -9,6 +9,14 @@ export interface SlideConfig {
   wall: any;
   Dlight: any;
   shadow_opacity: number;
+  qr_links: qrData[];
+}
+
+export interface qrData {
+  label: string;
+  link: string;
+  position: string;
+  qr: string;
 }
 
 export interface SlidePlayerConfig {

@@ -15,7 +15,7 @@ const Index = () => {
   }
 
   return (
-    <div className="w-full h-screen bg-black overflow-hidden">
+    <div className="w-full h-screen bg-transparent overflow-hidden">
       <SlidePlayer slug={token} />
     </div>
   );
