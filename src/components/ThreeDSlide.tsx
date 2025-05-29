@@ -7,22 +7,24 @@ import {
   Resize,
   ContactShadows,
   OrbitControls,
-  Html
+  Html,
 } from "@react-three/drei";
+import * as THREE from "three";
 import { SlideConfig } from "@/types/slide";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ModelProps {
   filePath: string;
   onLoad: (isLoading: boolean) => void;
-  onModelBeingTouched: (value: boolean) => void;
+  
 }
 
-function Model({ filePath, onLoad, onModelBeingTouched }: ModelProps) {
+function Model({ filePath, onLoad }: ModelProps) {
   const { scene } = useGLTF(filePath);
   const meshRef = useRef();
-  const [shouldRotate, setShouldRotate] = useState(true);
-  const [showPopup, setShowPopup] = useState(false);
+  const [annotations, setAnnotations] = useState<
+    { name: string; position: [number, number, number]; visible: boolean; sprite: THREE.Sprite }[]
+  >([]);
 
   useEffect(() => {
     if (scene) onLoad(false);
@@ -30,61 +32,153 @@ function Model({ filePath, onLoad, onModelBeingTouched }: ModelProps) {
   }, [scene, onLoad]);
 
   useFrame(() => {
-    if (meshRef.current && shouldRotate) {
-      meshRef.current.rotation.y += 0.01;
+    if (meshRef.current) {
+      const anyVisible = annotations.some((a) => a.visible);
+    if (!anyVisible) {
+      meshRef.current.rotation.y += 0.009;
+    }
     }
   });
 
   useEffect(() => {
+    const newAnnotations = [];
+
     scene.traverse((node) => {
       if (node.isMesh) {
         node.castShadow = true;
         node.receiveShadow = true;
         node.material.side = 2;
       }
+
+      if (node.userData.type === "annotation") {
+        const parent = node.parent;
+        if (!parent) return;
+
+        const placeholderPosition = node.position.clone();
+        const placeholderScale = node.scale.clone();
+
+        const texture = new THREE.TextureLoader().load("/loader/plus.png");
+        const material = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(material);
+        sprite.name = node.name;
+        sprite.position.copy(placeholderPosition);
+        sprite.scale.copy(placeholderScale);
+        
+        
+        sprite.userData = {
+        ...node.userData,
+        clickable: true,
+      };
+
+        parent.add(sprite);
+
+        newAnnotations.push({
+          name: node.name,
+          position: [placeholderPosition.x, placeholderPosition.y, placeholderPosition.z],
+          visible: false,
+          sprite: sprite,
+        });
+
+        node.visible = false; // Hide the original annotation node
+      }
     });
+
+    setAnnotations(newAnnotations);
   }, [scene]);
 
+  const handlePointerDown = (e) => {
+    console.log(e.object.userData);
+    
+    if (e.object.userData.clickable) {
+      e.stopPropagation();
+      setAnnotations((prev) =>
+        prev.map((ann) =>
+          ann.sprite === e.object
+            ? { ...ann, visible: !ann.visible }
+            : { ...ann, visible: false }
+        )
+      );
+    }
+  };
+
   return (
+    
     <group
       ref={meshRef}
-      onPointerEnter={() => {
-        setShouldRotate(true);
-        onModelBeingTouched(true);
-      }}
-      onPointerLeave={() => {
-        setShouldRotate(true);
-        onModelBeingTouched(false);
-      }}
+      onPointerDown={handlePointerDown}
     >
       <primitive object={scene} />
-      <mesh
-        position={[0, 0, 0]} // ← Adjust this to place the hotspot
-        onClick={() => setShowPopup(!showPopup)}
-      >
-        <sphereGeometry args={[0.05, 32, 32]} />
-        <meshStandardMaterial color="orange" emissive="yellow" emissiveIntensity={1} />
-        {showPopup && (
-          <Html
-            distanceFactor={10}
-            center
-            position={[0, 0.2, 0]}
-            style={{
-              background: "white",
-              padding: "6px 10px",
-              borderRadius: "8px",
-              fontSize: "0.8rem",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <div>
-              <strong>Hotspot Info</strong><br />
-              <button onClick={() => alert("Clicked!")}>Learn More</button>
+      
+      {annotations.map((a, idx) =>
+        a.visible ? (
+          <Html position={a.position} center key={idx}>
+            <div
+              style={{
+                background: 'white',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '0.8rem',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.25)',
+                whiteSpace: 'nowrap',
+                width: '100%',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>
+                {(() => {
+                  switch (a.sprite.userData.content_type) {
+                    case 'link': return '🔗 Link';
+                    case 'qr': return '📷 QR Code';
+                    case 'video': return '🎥 Video';
+                    case 'html': return '📝 Details';
+                    default: return a.sprite.userData.content_type || 'ℹ️ Info';
+                  }
+                })()}
+              </strong>
+                <button
+                  onClick={() =>
+                    setAnnotations((prev) =>
+                      prev.map((a) =>
+                        a.name === a.name ? { ...a, visible: false } : a
+                      )
+                    )
+                  }
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    marginLeft: '10px',
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              <div style={{ marginTop: '8px' }}>
+                {a.sprite.userData.content_type === 'link' && (
+                  <a href={a.sprite.userData.url} target="_blank" rel="noopener noreferrer" style={{ color: '#007BFF' }}>
+                    {a.sprite.userData.link_label}
+                  </a>
+                )}
+                {a.sprite.userData.content_type === 'qr' && <img src={a.sprite.userData.qr_image} alt="QR Code" className="" />}
+                {a.sprite.userData.content_type === 'video' && (
+                  <iframe
+                    width="400"
+                    height="226"
+                    src={a.sprite.userData.video_link}
+                    frameBorder="0"
+                    allowFullScreen
+                    style={{ borderRadius: '8px' }}
+                  ></iframe>
+                )}
+                {a.sprite.userData.content_type === 'html' && <div dangerouslySetInnerHTML={{ __html: a.sprite.userData.content }} />}
+              </div>
             </div>
           </Html>
-        )}
-      </mesh>
+        ) : null
+      )}
+
     </group>
   );
 }
@@ -92,26 +186,26 @@ function Model({ filePath, onLoad, onModelBeingTouched }: ModelProps) {
 interface ThreeDSlideProps {
   slide: SlideConfig;
   isActive: boolean;
-  onModelBeingTouched: (value: boolean) => void;
+  
 }
 
 const ThreeDSlide = ({
   slide,
   isActive,
-  onModelBeingTouched,
+  
 }: ThreeDSlideProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
 
   const positionClasses = {
-    top_left: 'top-4 left-4',
-    top_center: 'top-4 left-1/2 transform -translate-x-1/2',
-    top_right: 'top-4 right-4',
-    bottom_left: 'bottom-4 left-4',
-    bottom_center: 'bottom-4 left-1/2 transform -translate-x-1/2',
-    bottom_right: 'bottom-4 right-4', 
-    left_center: 'top-1/2 left-4 transform -translate-y-1/2',
-    right_center: 'top-1/2 right-4 transform -translate-y-1/2'
+    top_left: "top-4 left-4",
+    top_center: "top-4 left-1/2 transform -translate-x-1/2",
+    top_right: "top-4 right-4",
+    bottom_left: "bottom-4 left-4",
+    bottom_center: "bottom-4 left-1/2 transform -translate-x-1/2",
+    bottom_right: "bottom-4 right-4",
+    left_center: "top-1/2 left-4 transform -translate-y-1/2",
+    right_center: "top-1/2 right-4 transform -translate-y-1/2",
   };
 
   const QRDisplay = ({ qr_links }) => {
@@ -122,7 +216,7 @@ const ThreeDSlide = ({
         <div
           key={index}
           className={`absolute z-20 space-y-2 bg-white bg-opacity-70 p-2 rounded-lg shadow-md ${
-            positionClasses[item.position] || 'top-4 right-4'
+            positionClasses[item.position] || "top-4 right-4"
           }`}
         >
           <div className="flex items-center space-x-2">
@@ -178,7 +272,7 @@ const ThreeDSlide = ({
             <Model
               filePath={slide.file}
               onLoad={setIsLoading}
-              onModelBeingTouched={onModelBeingTouched}
+             
             />
             <OrbitControls enableZoom={true} enablePan={true} />
           </Resize>

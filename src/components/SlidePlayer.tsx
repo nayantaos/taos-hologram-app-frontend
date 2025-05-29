@@ -137,7 +137,7 @@ const SlidePlayer = ({ slug }) => {
             <ThreeDSlide
               slide={slide}
               isActive={index === currentSlideIndex}
-              onModelBeingTouched={setIsModelBeingTouched}
+              
             />
           ) : (
             <VideoSlide slide={slide} isActive={index === currentSlideIndex} />
