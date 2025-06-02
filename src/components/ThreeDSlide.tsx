@@ -19,6 +19,85 @@ interface ModelProps {
   
 }
 
+const ARViewer = ({ filePath }) => {
+  const viewerRef = useRef(null);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  
+  useEffect(() => {
+    // Dynamically load the model-viewer script
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
+    script.type = 'module';
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+
+    if (viewer) {
+      const handleLoad = () => {
+        setIsModelLoaded(true);
+        console.log('✨ The model has arrived — ready for its grand entrance.');
+
+        setTimeout(() => {
+          const arButton = viewer.querySelector('#ar-button');
+          if (arButton) {
+            console.log('Attempting to auto-trigger AR button...');
+            arButton.click(); // Will only work if user has interacted with the page
+          }else{
+            console.log('AR button is not visible...');
+          }
+        }, 500);
+      };
+
+      viewer.addEventListener('load', handleLoad);
+
+      return () => {
+        viewer.removeEventListener('load', handleLoad);
+      };
+    }
+  }, [viewerRef]);
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <model-viewer 
+        ref={viewerRef}
+        src={filePath} 
+        shadow-intensity="1" 
+        ar 
+        camera-controls 
+        touch-action="pan-y" 
+        alt="A 3D model"
+        style={{ width: '100%', height: '100%' }}
+      >
+        {isModelLoaded && (<button slot="ar-button"  id="ar-button" style={{
+              position: 'absolute',
+              bottom: '10%',
+              left: '25%',
+              padding: '10px 20px',
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              border: 'none',
+              borderRadius: '20px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+              opacity: isModelLoaded ? 1 : 0,
+              transition: 'opacity 0.5s ease-in-out',
+              zIndex: 20
+            }}>
+          View in your space
+        </button>
+        )}
+      </model-viewer>
+    </div>
+  );
+};
+
 function Model({ filePath, onLoad }: ModelProps) {
   const { scene } = useGLTF(filePath);
   const meshRef = useRef();
@@ -195,6 +274,7 @@ const ThreeDSlide = ({
   
 }: ThreeDSlideProps) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [showAR, setShowAR] = useState(false);
   const isMobile = useIsMobile();
 
   const positionClasses = {
@@ -241,6 +321,31 @@ const ThreeDSlide = ({
           />
         </div>
       )}
+      {showAR ? (
+        <>
+          <ARViewer filePath={slide.file}  />
+          <button 
+            onClick={() => setShowAR(false)}
+            style={{
+              position: 'absolute',
+              bottom: '3%',
+              left: '3%',
+              padding: '10px 20px',
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              border: 'none',
+              borderRadius: '20px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+              zIndex: 20
+            }}
+          >
+            Exit AR
+          </button> 
+        </>
+      ) : (
+        <>
       <QRDisplay qr_links={slide.qr_links} />
       <Canvas
         shadows
@@ -289,6 +394,30 @@ const ThreeDSlide = ({
         />
         <Environment preset="city" />
       </Canvas>
+      {!isLoading && (
+       <button 
+            onClick={() => setShowAR(true)}
+            style={{
+              position: 'absolute',
+              bottom: '10%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '10px 20px',
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              border: 'none',
+              borderRadius: '20px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+              zIndex: 20
+            }}
+          >
+            View in AR
+          </button>
+          )}
+        </>
+      )}
     </div>
   );
 };
