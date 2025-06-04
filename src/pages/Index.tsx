@@ -3,9 +3,7 @@ import SlidePlayer from "@/components/SlidePlayer";
 
 
 const Index = () => {
-  const { token } = useParams();
-  console.log('ToKEN ======>',token);
-  
+  const { token } = useParams();  
   if (!token) {
     return (
       <div className="text-white h-screen w-full flex items-center justify-center">

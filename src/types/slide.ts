@@ -10,6 +10,9 @@ export interface SlideConfig {
   Dlight: any;
   shadow_opacity: number;
   qr_links: qrData[];
+  product_name: string;
+  price: number;
+  Product_description: string;
 }
 
 export interface qrData {

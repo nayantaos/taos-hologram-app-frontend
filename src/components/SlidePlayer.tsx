@@ -11,6 +11,7 @@ const SlidePlayer = ({ slug }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSlideFresh, setIsSlideFresh] = useState<boolean>(true);
+  const [isPausedByAnnotation, setIsPausedByAnnotation] = useState(false);
 
   
   const [isModelBeingTouched, setIsModelBeingTouched] = useState(false);
@@ -86,11 +87,21 @@ const SlidePlayer = ({ slug }) => {
 
   // Effect to handle automatic slide change
   useEffect(() => {
-    if (!isSlideFresh && !isModelBeingTouched) {
+    console.log('isPausedByAnnotation:',isPausedByAnnotation);
+    
+    if (!isSlideFresh && !isModelBeingTouched && !isPausedByAnnotation) {
       goToNextSlide();
       setIsSlideFresh(true);
     }
-  }, [isSlideFresh, setIsSlideFresh, goToNextSlide, isModelBeingTouched]);
+  }, [isSlideFresh, setIsSlideFresh, goToNextSlide, isModelBeingTouched, isPausedByAnnotation]);
+
+  const handleAnnotationOpen = useCallback((isOpen: boolean) => {
+    setIsPausedByAnnotation(isOpen);
+    if (!isOpen) {
+      // Reset the timer when annotation closes
+      setIsSlideFresh(true);
+    }
+  }, []);
 
   // Effect to handle arrow navigation
 
@@ -137,6 +148,7 @@ const SlidePlayer = ({ slug }) => {
             <ThreeDSlide
               slide={slide}
               isActive={index === currentSlideIndex}
+              onAnnotationOpen={handleAnnotationOpen}
               
             />
           ) : (
@@ -144,21 +156,24 @@ const SlidePlayer = ({ slug }) => {
           )}
         </div>
       ))}
-      <div className="absolute inset-y-0 inset-x-0 flex items-center justify-between z-50 px-4 pointer-events-none">
-        <button
-          onClick={goToPreviousSlide}
-          className="p-2 text-black pointer-events-auto"
-        >
-          <ChevronLeftIcon className="w-10 h-10" />
-        </button>
-
-        <button
-          onClick={goToNextSlide}
-          className="p-2 text-black pointer-events-auto"
-        >
-          <ChevronRightIcon className="w-10 h-10" />
-        </button>
+      <div className="absolute top-[calc(60%-20px)] left-4 z-50 flex space-x-2">
+        {config.files.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => {
+              setCurrentSlideIndex(index);
+              setIsSlideFresh(true);
+            }}
+            className={`w-4 h-4 rounded-full border-2 transition-all duration-300
+              ${index === currentSlideIndex 
+                ? "bg-gray-600 border-gray-600 scale-120" 
+                : "bg-transparent border-gray-400 opacity-70 hover:opacity-100"}
+            `}
+          />
+        ))}
       </div>
+
+
     </div>
   );
 };
