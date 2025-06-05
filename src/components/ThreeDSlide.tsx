@@ -317,7 +317,7 @@ const ThreeDSlide = ({
 
   return (
   <div className={`w-full h-full bg-transparent flex flex-col`}>
-    <div style={{ flex: '0 0 60%', position: 'relative' }}>
+    <div style={{ height: '70dvh', position: 'relative', flex: '0 0 auto' }}>
         {isLoading && (
           <div className="absolute inset-0 z-10 bg-white flex items-center justify-center touch-manipulation">
             <img
@@ -444,62 +444,61 @@ const ThreeDSlide = ({
             </button>
           )} */}
         </div>
-      </div>
-     <div style={{ flex: '0 0 40%', overflowY: 'auto' }}>
-  <div className="absolute bottom-0 left-0 w-full bg-white px-6 py-4 z-20 flex flex-col space-y-4">
-    
-    {/* Title + Buttons in one row */}
-    <div className="w-full flex items-center justify-between flex-wrap gap-2">
-      <h2 className="text-xl font-bold text-gray-900">
-        {slide.product_name || "Product Title"}
-      </h2>
-      <div className="flex space-x-3">
-        {!isLoading && (
-        <button
-          onClick={() => setShowAR(true)}
-          className="flex items-center space-x-2 px-2 py-2 rounded-full bg-white border border-gray-400 text-sm text-gray-800 shadow hover:bg-gray-100 transition"
-          aria-label="View in AR"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="text-gray-800"
-          >
-            <rect fill="none" width="24" height="24" />
-            <g>
-              <path d="M3,4c0-0.55,0.45-1,1-1h2V1H4C2.35,1,1,2.35,1,4v2h2V4z" />
-              <path d="M20,3c0.55,0,1,0.45,1,1v2h2V4c0-1.65-1.35-3-3-3h-2v2H20z" />
-              <path d="M4,21c-0.55,0-1-0.45-1-1v-2H1v2c0,1.65,1.35,3,3,3h2v-2H4z" />
-              <path d="M20,21c0.55,0,1-0.45,1-1v-2h2v2c0,1.65-1.35,3-3,3h-2v-2H20z" />
-              <path d="M18.25,7.6l-5.5-3.18c-0.46-0.27-1.04-0.27-1.5,0L5.75,7.6C5.29,7.87,5,8.36,5,8.9v6.35c0,0.54,0.29,1.03,0.75,1.3l5.5,3.18c0.46,0.27,1.04,0.27,1.5,0l5.5-3.18c0.46-0.27,0.75-0.76,0.75-1.3V8.9C19,8.36,18.71,7.87,18.25,7.6z M7,14.96v-4.62l4,2.32v4.61L7,14.96z M12,10.93L8,8.61l4-2.31l4,2.31L12,10.93z M13,17.27v-4.61l4-2.32v4.62L13,17.27z" />
-            </g>
-          </svg>
-        </button>
+    </div>
+    <div style={{ height: '100dvh', overflowY: 'auto', flex: '0 0 auto' }}>
+      <div className="w-full bg-white px-6 py-2 z-20 flex flex-col space-y-4">
+        
+        {/* Title + Buttons in one row */}
+        <div className="w-full flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-xl font-bold text-gray-900">
+            {slide.product_name || "Product Title"}
+          </h2>
+          <div className="flex space-x-3">
+            {!isLoading && (
+            <button
+              onClick={() => setShowAR(true)}
+              className="flex items-center space-x-2 px-2 py-2 rounded-full bg-white border border-gray-400 text-sm text-gray-800 shadow hover:bg-gray-100 transition"
+              aria-label="View in AR"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="text-gray-800"
+              >
+                <rect fill="none" width="24" height="24" />
+                <g>
+                  <path d="M3,4c0-0.55,0.45-1,1-1h2V1H4C2.35,1,1,2.35,1,4v2h2V4z" />
+                  <path d="M20,3c0.55,0,1,0.45,1,1v2h2V4c0-1.65-1.35-3-3-3h-2v2H20z" />
+                  <path d="M4,21c-0.55,0-1-0.45-1-1v-2H1v2c0,1.65,1.35,3,3,3h2v-2H4z" />
+                  <path d="M20,21c0.55,0,1-0.45,1-1v-2h2v2c0,1.65-1.35,3-3,3h-2v-2H20z" />
+                  <path d="M18.25,7.6l-5.5-3.18c-0.46-0.27-1.04-0.27-1.5,0L5.75,7.6C5.29,7.87,5,8.36,5,8.9v6.35c0,0.54,0.29,1.03,0.75,1.3l5.5,3.18c0.46,0.27,1.04,0.27,1.5,0l5.5-3.18c0.46-0.27,0.75-0.76,0.75-1.3V8.9C19,8.36,18.71,7.87,18.25,7.6z M7,14.96v-4.62l4,2.32v4.61L7,14.96z M12,10.93L8,8.61l4-2.31l4,2.31L12,10.93z M13,17.27v-4.61l4-2.32v4.62L13,17.27z" />
+                </g>
+              </svg>
+            </button>
 
-        )}
-        <button
-          onClick={() => alert("We are working on this features...")}
-          className="px-5 py-2 rounded-full bg-yellow-500 text-white text-sm font-semibold shadow hover:bg-yellow-600 transition"
-        >
-          Buy Now
-        </button>
+            )}
+            <button
+              onClick={() => alert("We are working on this features...")}
+              className="px-5 py-2 rounded-full bg-yellow-500 text-white text-sm font-semibold shadow hover:bg-yellow-600 transition"
+            >
+              Buy Now
+            </button>
+          </div>
+        </div>
+
+        {/* Price + Description below */}
+        <p className="text-sm text-gray-700 font-medium">
+          {slide.price ? `$${slide.price}` : "$299.99"}
+        </p>
+        <p className="text-sm text-gray-600 mt-1">
+          {slide.Product_description ||
+            "Experience timeless elegance with our handcrafted full-grain leather weekender bag. A perfect blend of vintage soul and modern function."}
+        </p>
       </div>
     </div>
-
-    {/* Price + Description below */}
-    <p className="text-sm text-gray-700 font-medium">
-      {slide.price ? `$${slide.price}` : "$299.99"}
-    </p>
-    <p className="text-sm text-gray-600 mt-1">
-      {slide.Product_description ||
-        "Experience timeless elegance with our handcrafted full-grain leather weekender bag. A perfect blend of vintage soul and modern function."}
-    </p>
-  </div>
-</div>
-
   </div>
   );
 };

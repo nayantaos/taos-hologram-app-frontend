@@ -156,7 +156,7 @@ const SlidePlayer = ({ slug }) => {
           )}
         </div>
       ))}
-      <div className="absolute top-[calc(60%-20px)] left-4 z-50 flex space-x-2">
+      <div className="absolute top-[calc(70dvh-20px)] left-4 z-50 flex space-x-2">
         {config.files.map((_, index) => (
           <button
             key={index}
