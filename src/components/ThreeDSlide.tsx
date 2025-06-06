@@ -106,9 +106,9 @@ function Model({ filePath, onLoad, onAnnotationOpen }: ModelProps) {
   useFrame(() => {
     if (meshRef.current) {
       const anyVisible = annotations.some((a) => a.visible);
-    if (!anyVisible) {
-      meshRef.current.rotation.y += 0.009;
-    }
+    // if (!anyVisible) {
+    //   meshRef.current.rotation.y += 0.009;
+    // }
     }
   });
 
@@ -323,7 +323,7 @@ const ThreeDSlide = ({
             <img
               src="/loader/skechers-logo.png"
               alt="Loading..."
-              className="w-[80%] animate-pulse"
+              className="w-[80%] "
             />
           </div>
         )}
@@ -356,7 +356,7 @@ const ThreeDSlide = ({
               <img
                 src="/loader/skechers-logo.png"
                 alt="Loading..."
-                className="w-[80%] animate-pulse"
+                className="w-[80%] "
               />
             </div>
           )}
@@ -366,6 +366,7 @@ const ThreeDSlide = ({
             shadows
             camera={{ position: [-3, 4, 15], fov: isMobile ? 10 : 6 }}
             gl={{ antialias: true }}
+            frameloop="demand"
           >
             {/* <group>
             <line>
