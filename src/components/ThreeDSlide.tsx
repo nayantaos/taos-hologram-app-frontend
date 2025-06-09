@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState, Suspense, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Environment, PresentationControls, Resize, ContactShadows, OrbitControls, Html} from "@react-three/drei";
+import { useGLTF, useAnimations, Environment, PresentationControls, Resize, ContactShadows, OrbitControls, Html} from "@react-three/drei";
 import * as THREE from "three";
 import { SlideConfig } from "@/types/slide";
 import { useIsMobile } from "@/hooks/use-mobile";
+
 
 interface ModelProps {
   filePath: string;
   onLoad: (isLoading: boolean) => void;
   onAnnotationOpen?: (isOpen: boolean) => void;
+  isVisible?: boolean;
+  onAnimationsLoaded?: (names: string[], play: (name: string) => void) => void;
 }
 
 const ARViewer = ({ filePath }) => {
@@ -91,12 +94,80 @@ const ARViewer = ({ filePath }) => {
   );
 };
 
-function Model({ filePath, onLoad, onAnnotationOpen }: ModelProps) {
-  const { scene } = useGLTF(filePath);
+function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoaded }: ModelProps) {
+  const { scene, animations } = useGLTF(filePath);
   const meshRef = useRef();
+  const { actions, names } = useAnimations(animations, meshRef);
+  const [currentAction, setCurrentAction] = useState<string | null>(null);
+  useEffect(() => {
+    if (names.length && actions && onAnimationsLoaded) {
+      onAnimationsLoaded(names, playAnimation);
+    }
+  }, [names, actions, onAnimationsLoaded]);
+
   const [annotations, setAnnotations] = useState<
     { name: string; position: [number, number, number]; visible: boolean; sprite: THREE.Sprite }[]
   >([]);
+  
+  useEffect(() => {
+    if (!scene || typeof scene.visible === 'undefined') return;
+    scene.visible = isVisible;
+  }, [isVisible, scene]);
+
+  useEffect(() => {
+    return () => {
+      if (!scene || typeof scene.traverse !== 'function') return;
+
+      scene.traverse((child: THREE.Object3D) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+
+          // Dispose geometry
+          mesh.geometry?.dispose();
+
+          // Dispose materials
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat) => mat.dispose?.());
+          } else {
+            mesh.material?.dispose?.();
+          }
+
+          // Dispose textures
+          const material = mesh.material as THREE.Material;
+          for (const key in material) {
+            const value = (material as any)[key];
+            if (value?.isTexture) value.dispose?.();
+          }
+
+          // Remove mesh
+          mesh.parent?.remove(mesh);
+        }
+      });
+    };
+  }, [scene]);
+  useEffect(() => {
+    if (scene) {
+      onLoad(false);
+    }
+  }, [scene, onLoad]);
+
+
+
+
+  const playAnimation = (name: string) => {
+   stopCurrentAction();
+    if (actions[name]) {
+     actions[name].reset().fadeIn(0.3).play();
+     setCurrentAction(name);
+    }
+  };
+
+  const stopCurrentAction = () => {
+    if (currentAction && actions[currentAction]) {
+      actions[currentAction].fadeOut(0.2).stop();
+    }
+  };
+
 
   useEffect(() => {
     if (scene) onLoad(false);
@@ -185,8 +256,30 @@ function Model({ filePath, onLoad, onAnnotationOpen }: ModelProps) {
       ref={meshRef}
       onPointerDown={handlePointerDown}
     >
-      <primitive object={scene} />
+      <primitive object={scene} dispose={null}/>
+      {/* <Html position={[0, 0, 0]} center>
       
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', background: 'rgba(255,255,255,0.8)', padding: '10px', borderRadius: '8px' }}>
+          {names.map((name, i) => (
+            <button
+              key={i}
+              onClick={() => playAnimation(name)}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: currentAction === name ? '#333' : '#555',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
+              {name}
+            </button>
+          ))}
+      
+        </div>
+      </Html> */}
       {annotations.map((a, idx) =>
       
         a.visible ? (
@@ -282,6 +375,10 @@ const ThreeDSlide = ({
   const [showAR, setShowAR] = useState(false);
   const isMobile = useIsMobile();
 
+  const [animationNames, setAnimationNames] = useState<string[]>([]);
+  const [triggerAnimation, setTriggerAnimation] = useState<(name: string) => void>(() => () => {});
+
+
   const positionClasses = {
     top_left: "top-4 left-4",
     top_center: "top-4 left-1/2 transform -translate-x-1/2",
@@ -366,7 +463,7 @@ const ThreeDSlide = ({
             shadows
             camera={{ position: [-3, 4, 15], fov: isMobile ? 10 : 6 }}
             gl={{ antialias: true }}
-            frameloop="demand"
+           // frameloop="demand"
           >
             {/* <group>
             <line>
@@ -405,10 +502,15 @@ const ThreeDSlide = ({
               polar={[-Math.PI / 3, Math.PI / 3]}
               azimuth={[-Math.PI / 1.4, Math.PI / 2]}
             >
-              <Resize height width >
-                <Model filePath={slide.file} onLoad={setIsLoading} onAnnotationOpen={onAnnotationOpen} />
-                <OrbitControls enableZoom={true} enablePan={true} />
-              </Resize>
+              <Suspense fallback={<Html center></Html>}>
+                <Resize height width >
+                  <Model filePath={slide.file} onLoad={setIsLoading} onAnnotationOpen={onAnnotationOpen} isVisible={isActive} onAnimationsLoaded={(names, play) => {
+    setAnimationNames(names);
+    setTriggerAnimation(() => play);
+  }} />
+                  <OrbitControls enableZoom={true} enablePan={true} />
+                </Resize>
+              </Suspense>
             </PresentationControls>
             <ContactShadows
               rotation={[-Math.PI / 2, 0, 0]}
@@ -422,6 +524,43 @@ const ThreeDSlide = ({
             />
             <Environment preset="city" />
           </Canvas>
+          {animationNames.length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '10px',
+                right: '20px',
+                zIndex: 20,
+                display: 'flex',
+                alignItems:'center',
+                gap: '8px',
+                background: 'rgba(255,255,255,0.85)',
+                padding: '10px',
+                borderRadius: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                
+              }}
+            > <span style={{ width:'100%' }}>Animation: </span>
+              {animationNames.map((name, i) => (
+                <button
+                  key={i}
+                  onClick={() => triggerAnimation(name)}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.8rem',
+                    background: '#333',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* {!isLoading && (
             <button 
               onClick={() => setShowAR(true)}
