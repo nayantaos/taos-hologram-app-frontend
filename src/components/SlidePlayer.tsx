@@ -11,9 +11,7 @@ const SlidePlayer = ({ slug }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSlideFresh, setIsSlideFresh] = useState<boolean>(true);
-  const [isPausedByAnnotation, setIsPausedByAnnotation] = useState(false);
-
-  
+  const [isPausedByAnnotation, setIsPausedByAnnotation] = useState(false);  
   const [isModelBeingTouched, setIsModelBeingTouched] = useState(false);
 
   useEffect(() => {
