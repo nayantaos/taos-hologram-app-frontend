@@ -1,118 +1,103 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { SlidePlayerConfig } from "@/types/slide";
 import ThreeDSlide from "./ThreeDSlide";
 import VideoSlide from "./VideoSlide";
 import NotFound from "@/pages/NotFound";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid"; // or 24/solid
+import { useModelPreloader } from "@/hooks/use-model-preloader"; // adjust path if needed
+
 
 const SlidePlayer = ({ slug }) => {
   const [config, setConfig] = useState<SlidePlayerConfig | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSlideFresh, setIsSlideFresh] = useState<boolean>(true);
-  const [isPausedByAnnotation, setIsPausedByAnnotation] = useState(false);  
-  const [isModelBeingTouched, setIsModelBeingTouched] = useState(false);
+  const [isPausedByAnnotation, setIsPausedByAnnotation] = useState(false);
+  const [isSlideLoading, setIsSlideLoading] = useState<boolean>(true); // 🌟 new
+
+  const autoTimer = useRef<NodeJS.Timeout | null>(null); // ⏲️ External timer ref
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        //const response = await fetch("/config.json");
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
-        
         if (response.status === 404) {
           <NotFound />;
           return;
         }
-        
-        if (!response.ok)
-          throw new Error("Failed to get model from S3 Bucket.");
+        if (!response.ok) throw new Error("Failed to get model from S3 Bucket.");
         const data = await response.json();
-        console.log(data);
-        
         setConfig(data);
+        
+
       } catch (err) {
-        setError(
-          "Error loading : " +
-            (err instanceof Error ? err.message : String(err))
-        );
+        setError("Error loading: " + (err instanceof Error ? err.message : String(err)));
         <NotFound />;
       } finally {
         setLoading(false);
       }
     };
     fetchConfig();
-  }, []);
+  }, [slug]);
+
+  //Pre load custom hook
+  useModelPreloader(config?.files?.filter(f => f.type === '3d').map(f => f.file));
 
   const goToPreviousSlide = useCallback(() => {
-   
-    setIsSlideFresh(true);
-
     if (!config) return;
-
-    setTimeout(() => {
-      setCurrentSlideIndex((prevIndex) =>
-        prevIndex - 1 < 0 ? config.files.length - 1 : prevIndex - 1
-      );
-    }, 500);
+    clearAutoTimer();
+    setCurrentSlideIndex((prevIndex) =>
+      prevIndex - 1 < 0 ? config.files.length - 1 : prevIndex - 1
+    );
   }, [config]);
 
   const goToNextSlide = useCallback(() => {
-    
-    setIsSlideFresh(true);
-
     if (!config) return;
-
-    setTimeout(() => {
-      setCurrentSlideIndex(
-        (prevIndex) => (prevIndex + 1) % config.files.length
-      );
-    }, 500);
+    clearAutoTimer();
+    setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % config.files.length);
   }, [config]);
 
-  // Effect to handle rotation_timer
-
-  useEffect(() => {
-    if (!config || config.files.length === 0) return;
-    const currentSlide = config.files[currentSlideIndex];
-
-    const timer = setTimeout(
-      () => setIsSlideFresh(false),
-      currentSlide.rotation_time * 1000
-    );
-    return () => clearTimeout(timer);
-  }, [config, setIsSlideFresh, currentSlideIndex]);
-
-  // Effect to handle automatic slide change
-  useEffect(() => {
-    console.log('isPausedByAnnotation:',isPausedByAnnotation);
-    
-    if (!isSlideFresh && !isModelBeingTouched && !isPausedByAnnotation) {
-      goToNextSlide();
-      setIsSlideFresh(true);
+  const clearAutoTimer = () => {
+    if (autoTimer.current) {
+      clearTimeout(autoTimer.current);
+      autoTimer.current = null;
     }
-  }, [isSlideFresh, setIsSlideFresh, goToNextSlide, isModelBeingTouched, isPausedByAnnotation]);
+  };
+
+  const startAutoTimer = useCallback((rotationTimeSec: number) => {
+    clearAutoTimer();
+    autoTimer.current = setTimeout(() => {
+      if (!isPausedByAnnotation) {
+        goToNextSlide();
+      }
+    }, rotationTimeSec * 1000);
+  }, [goToNextSlide, isPausedByAnnotation]);
 
   const handleAnnotationOpen = useCallback((isOpen: boolean) => {
     setIsPausedByAnnotation(isOpen);
-    if (!isOpen) {
-      // Reset the timer when annotation closes
-      setIsSlideFresh(true);
+    if (!isOpen && config) {
+      const slide = config.files[currentSlideIndex];
+      startAutoTimer(slide.rotation_time);
+    } else {
+      clearAutoTimer();
     }
-  }, []);
+  }, [config, currentSlideIndex, startAutoTimer]);
 
-  // Effect to handle arrow navigation
+  const handleModelLoaded = useCallback(() => {
+    setTimeout(() => {
+      setIsSlideLoading(false); // ⏱️ Enable dots after delay
+      if (config) {
+        const slide = config.files[currentSlideIndex];
+        startAutoTimer(slide.rotation_time);
+      }
+    }, 2000); // 1 second delay after model is visible
+  }, [config, currentSlideIndex, startAutoTimer]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEventInit) => {
-      if (e.key === "ArrowRight") goToNextSlide();
-      if (e.key === "ArrowLeft") goToPreviousSlide();
-    };
+    clearAutoTimer(); // Clear when slide changes
+    setIsPausedByAnnotation(false);
+    setIsSlideLoading(true); // 🔒 block when new slide loads
+  }, [currentSlideIndex]);
 
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goToNextSlide, goToPreviousSlide]);
 
   if (error) {
     return (
@@ -127,7 +112,7 @@ const SlidePlayer = ({ slug }) => {
 
   if (loading || !config || config.files.length === 0) {
     return (
-      <div className="w-full h-screen flex items-center justify-center  text-white">
+      <div className="w-full h-screen flex items-center justify-center text-white">
         <p>Loading...</p>
       </div>
     );
@@ -147,31 +132,34 @@ const SlidePlayer = ({ slug }) => {
               slide={slide}
               isActive={index === currentSlideIndex}
               onAnnotationOpen={handleAnnotationOpen}
-              
+              onModelLoaded={handleModelLoaded}
             />
           ) : (
             <VideoSlide slide={slide} isActive={index === currentSlideIndex} />
           )}
         </div>
       ))}
+
       <div className="absolute top-[calc(70dvh-20px)] left-4 z-50 flex space-x-2">
         {config.files.map((_, index) => (
           <button
             key={index}
             onClick={() => {
-              setCurrentSlideIndex(index);
-              setIsSlideFresh(true);
+              if (!isSlideLoading && index !== currentSlideIndex) {
+                setCurrentSlideIndex(index);
+                clearAutoTimer();
+                setIsSlideLoading(true); // immediately lock all dots
+              }
             }}
-            className={`w-4 h-4 rounded-full border-2 transition-all duration-300
-              ${index === currentSlideIndex 
-                ? "bg-gray-600 border-gray-600 scale-120" 
-                : "bg-transparent border-gray-400 opacity-70 hover:opacity-100"}
-            `}
+            disabled={isSlideLoading}
+            className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+              index === currentSlideIndex
+                ? "bg-gray-600 border-gray-600 scale-120"
+                : "bg-transparent border-gray-400 opacity-70 hover:opacity-100"
+            } ${isSlideLoading ? "cursor-not-allowed opacity-40" : ""}`}
           />
-        ))}
+        ))} 
       </div>
-
-
     </div>
   );
 };

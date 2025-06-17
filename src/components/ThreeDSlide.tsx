@@ -11,6 +11,7 @@ interface ModelProps {
   onAnnotationOpen?: (isOpen: boolean) => void;
   isVisible?: boolean;
   onAnimationsLoaded?: (names: string[], play: (name: string) => void) => void;
+  onModelLoaded?: () => void;
 }
 
 const ARViewer = ({ filePath }) => {
@@ -110,7 +111,7 @@ const ARViewer = ({ filePath }) => {
   );
 };
 
-function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoaded }: ModelProps) {
+function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoaded, onModelLoaded }: ModelProps) {
   const { scene, animations } = useGLTF(filePath);
   const meshRef = useRef<THREE.Group>(null);
   const { actions, names } = useAnimations(animations, meshRef);
@@ -124,6 +125,15 @@ function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoad
       onAnimationsLoaded(names, playAnimation);
     }
   }, [names, actions, onAnimationsLoaded]);
+
+   useFrame(() => {
+    if (meshRef.current) {
+      const anyVisible = annotations.some((a) => a.visible);
+    if (!anyVisible) {
+      meshRef.current.rotation.y += 0.009;
+    }
+    }
+  });
 
   useEffect(() => {
     if (scene && typeof scene.visible !== 'undefined') {
@@ -214,10 +224,13 @@ function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoad
         }
       });
       setAnnotations(newAnnotations);
+      if (onModelLoaded) onModelLoaded();
     } else {
       onLoad(true);
     }
   }, [scene, onLoad]);
+
+ 
 
   const playAnimation = (name: string) => {
     stopCurrentAction();
@@ -334,9 +347,10 @@ interface ThreeDSlideProps {
   slide: SlideConfig;
   isActive: boolean;
   onAnnotationOpen?: (isOpen: boolean) => void;
+  onModelLoaded?: () => void;
 }
 
-const ThreeDSlide = ({ slide, isActive, onAnnotationOpen }: ThreeDSlideProps) => {
+const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeDSlideProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAR, setShowAR] = useState(false);
   const isMobile = useIsMobile();
@@ -344,6 +358,7 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen }: ThreeDSlideProps) =>
   const [triggerAnimation, setTriggerAnimation] = useState<(name: string) => void>(() => () => {});
   const canvasKey = useRef(0);
 
+  
   const positionClasses = {
     top_left: "top-4 left-4",
     top_center: "top-4 left-1/2 transform -translate-x-1/2",
@@ -402,7 +417,7 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen }: ThreeDSlideProps) =>
           <div style={{ width: '100%', height: '100%' }}>
             <ARViewer filePath={slide.file} />
             <button 
-              onClick={() => setShowAR(false)}
+              onClick={() => { setShowAR(false); onAnnotationOpen(false); }}
               style={{
                 position: 'absolute',
                 bottom: '3%',
@@ -471,6 +486,7 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen }: ThreeDSlideProps) =>
                         onLoad={setIsLoading} 
                         onAnnotationOpen={onAnnotationOpen} 
                         isVisible={isActive} 
+                        onModelLoaded={onModelLoaded}
                         onAnimationsLoaded={(names, play) => {
                           setAnimationNames(names);
                           setTriggerAnimation(() => play);
@@ -552,7 +568,7 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen }: ThreeDSlideProps) =>
             <div className="flex space-x-3">
               {!isLoading && (
                 <button
-                  onClick={() => setShowAR(true)}
+                  onClick={() => {setShowAR(true); onAnnotationOpen(true); }} 
                   className="flex items-center space-x-2 px-2 py-2 rounded-full bg-white border border-gray-400 text-sm text-gray-800 shadow hover:bg-gray-100 transition"
                   aria-label="View in AR"
                 >
