@@ -1,9 +1,11 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import SlidePlayer from "@/components/SlidePlayer";
 
-
 const Index = () => {
-  const { token } = useParams();  
+  const { token } = useParams();
+  const [searchParams] = useSearchParams();
+  const version = searchParams.get("version");
+
   if (!token) {
     return (
       <div className="text-white h-screen w-full flex items-center justify-center">
@@ -14,7 +16,7 @@ const Index = () => {
 
   return (
     <div className="w-full h-screen bg-transparent overflow-hidden">
-      <SlidePlayer slug={token} />
+      <SlidePlayer slug={token} version={version} />
     </div>
   );
 };

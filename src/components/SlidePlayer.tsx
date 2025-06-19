@@ -4,9 +4,12 @@ import ThreeDSlide from "./ThreeDSlide";
 import VideoSlide from "./VideoSlide";
 import NotFound from "@/pages/NotFound";
 import { useModelPreloader } from "@/hooks/use-model-preloader"; // adjust path if needed
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 
 
-const SlidePlayer = ({ slug }) => {
+const SlidePlayer = ({ slug, version  }) => {
+  
+  
   const [config, setConfig] = useState<SlidePlayerConfig | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -26,7 +29,11 @@ const SlidePlayer = ({ slug }) => {
         }
         if (!response.ok) throw new Error("Failed to get model from S3 Bucket.");
         const data = await response.json();
+        //const filteredData = version === "1" ? { ...data, files: [data.files[0]] } : data;
+        console.log('data:',data);
+        
         setConfig(data);
+        //setConfig(data);
         
 
       } catch (err) {
@@ -64,13 +71,14 @@ const SlidePlayer = ({ slug }) => {
   };
 
   const startAutoTimer = useCallback((rotationTimeSec: number) => {
+    //if (version === "1") return; 
     clearAutoTimer();
     autoTimer.current = setTimeout(() => {
       if (!isPausedByAnnotation) {
         goToNextSlide();
       }
     }, rotationTimeSec * 1000);
-  }, [goToNextSlide, isPausedByAnnotation]);
+  }, [goToNextSlide, isPausedByAnnotation, version]);
 
   const handleAnnotationOpen = useCallback((isOpen: boolean) => {
     setIsPausedByAnnotation(isOpen);
@@ -85,12 +93,13 @@ const SlidePlayer = ({ slug }) => {
   const handleModelLoaded = useCallback(() => {
     setTimeout(() => {
       setIsSlideLoading(false); // ⏱️ Enable dots after delay
+      //if (version === "1") return; 
       if (config) {
         const slide = config.files[currentSlideIndex];
         startAutoTimer(slide.rotation_time);
       }
     }, 2000); // 1 second delay after model is visible
-  }, [config, currentSlideIndex, startAutoTimer]);
+  }, [config, currentSlideIndex, startAutoTimer, version]);
 
   useEffect(() => {
     clearAutoTimer(); // Clear when slide changes
@@ -120,48 +129,82 @@ const SlidePlayer = ({ slug }) => {
 
   return (
     <div className="w-full h-screen overflow-hidden bg-transparent relative">
-      {config.files.map((slide, index) => (
-        <div
-          key={index}
-          className={`absolute px-42 md:px-0 inset-0 transition-opacity duration-700 ease-in-out ${
-            index === currentSlideIndex ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
-          }`}
-        >
-          {slide.type === "3d" ? (
-            <ThreeDSlide
-              slide={slide}
-              isActive={index === currentSlideIndex}
-              onAnnotationOpen={handleAnnotationOpen}
-              onModelLoaded={handleModelLoaded}
-            />
-          ) : (
-            <VideoSlide slide={slide} isActive={index === currentSlideIndex} />
-          )}
-        </div>
-      ))}
+      {(() => {
+        const slide = config.files[currentSlideIndex];
+        return (
+          <div
+            key={currentSlideIndex}
+            className="absolute px-42 md:px-0 inset-0 transition-opacity duration-700 ease-in-out opacity-100 z-10"
+          >
+            {slide.type === "3d" ? (
+              <ThreeDSlide
+                key={`slide-${currentSlideIndex}`}
+                slide={slide}
+                isActive={true}
+                onAnnotationOpen={handleAnnotationOpen}
+                onModelLoaded={handleModelLoaded}
+                version={version}
+              />
+            ) : (
+              <VideoSlide
+                key={`slide-${currentSlideIndex}`}
+                slide={slide}
+                isActive={true}
+              />
+            )}
+          </div>
+        );
+      })()}
 
-      <div className="absolute top-[calc(70dvh-20px)] left-4 z-50 flex space-x-2">
-        {config.files.map((_, index) => (
+      {version !== "1" && (
+        <div
+          className={`absolute ${
+            version === "1"
+              ? "top-[calc(100dvh-40px)]"
+              : "top-[calc(70dvh-20px)]"
+          } left-4 z-50 flex space-x-2`}
+        >
+          {config.files.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                if (!isSlideLoading && index !== currentSlideIndex) {
+                  setCurrentSlideIndex(index);
+                  clearAutoTimer();
+                  setIsSlideLoading(true);
+                }
+              }}
+              disabled={isSlideLoading}
+              className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+                index === currentSlideIndex
+                  ? "bg-gray-600 border-gray-600 scale-120"
+                  : "bg-transparent border-gray-400 opacity-70 hover:opacity-100"
+              } ${isSlideLoading ? "cursor-not-allowed opacity-40" : ""}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {version === "1" && (
+        <div className="absolute inset-y-0 inset-x-0 flex items-center justify-between z-50 px-4 pointer-events-none">
           <button
-            key={index}
-            onClick={() => {
-              if (!isSlideLoading && index !== currentSlideIndex) {
-                setCurrentSlideIndex(index);
-                clearAutoTimer();
-                setIsSlideLoading(true); // immediately lock all dots
-              }
-            }}
-            disabled={isSlideLoading}
-            className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
-              index === currentSlideIndex
-                ? "bg-gray-600 border-gray-600 scale-120"
-                : "bg-transparent border-gray-400 opacity-70 hover:opacity-100"
-            } ${isSlideLoading ? "cursor-not-allowed opacity-40" : ""}`}
-          />
-        ))} 
-      </div>
+            onClick={goToPreviousSlide}
+            className="p-2 text-black pointer-events-auto"
+          >
+            <ChevronLeftIcon className="w-100 h-10" />
+          </button>
+
+          <button
+            onClick={goToNextSlide}
+            className="p-2 text-black pointer-events-auto"
+          >
+            <ChevronRightIcon className="w-100 h-10" />
+          </button>
+        </div>
+      )}
     </div>
   );
+
 };
 
 export default SlidePlayer;

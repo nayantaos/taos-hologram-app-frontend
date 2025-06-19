@@ -232,13 +232,18 @@ function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoad
 
  
 
-  const playAnimation = (name: string) => {
+  const playAnimation = (name: string, speed: number = 0.60) => {
     stopCurrentAction();
     if (actions && actions[name]) {
-      actions[name].reset().fadeIn(0.3).play();
+      actions[name]
+        .reset()
+        .setEffectiveTimeScale(speed) // 🌀 Set animation speed here
+        .fadeIn(0.3)
+        .play();
       setCurrentAction(name);
     }
   };
+
 
   const stopCurrentAction = () => {
     if (currentAction && actions && actions[currentAction]) {
@@ -348,9 +353,10 @@ interface ThreeDSlideProps {
   isActive: boolean;
   onAnnotationOpen?: (isOpen: boolean) => void;
   onModelLoaded?: () => void;
+  version: string;
 }
 
-const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeDSlideProps) => {
+const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version}: ThreeDSlideProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAR, setShowAR] = useState(false);
   const isMobile = useIsMobile();
@@ -358,14 +364,48 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeD
   const [triggerAnimation, setTriggerAnimation] = useState<(name: string) => void>(() => () => {});
   const canvasKey = useRef(0);
 
+  useEffect(() => {
+    return () => {
+      const canvasElements = document.querySelectorAll('canvas');
+      canvasElements.forEach((canvas) => {
+        const gl = canvas.getContext('webgl2');
+        if (gl) {
+          const ext = gl.getExtension('WEBGL_lose_context');
+          if (ext) {
+            ext.loseContext();
+          }
+        }
+        canvas.remove(); // force DOM removal
+        console.log('canvas removed'); 
+        
+      });
+    };
+  }, []);
+
+
+  useEffect(() => {
+    return () => {
+      const canvasElements = document.querySelectorAll('canvas');
+      canvasElements.forEach((canvas) => {
+        const parent = canvas.parentElement;
+        if (parent) {
+          parent.removeChild(canvas);
+          console.log('remove...');
+        }
+      });
+    };
+  }, []);
+
+
+
   
   const positionClasses = {
     top_left: "top-4 left-4",
     top_center: "top-4 left-1/2 transform -translate-x-1/2",
     top_right: "top-4 right-4",
-    bottom_left: "bottom-4 left-4",
-    bottom_center: "bottom-4 left-1/2 transform -translate-x-1/2",
-    bottom_right: "bottom-4 right-4",
+    bottom_left: "bottom-8 left-4",
+    bottom_center: "bottom-8 left-1/2 transform -translate-x-1/2",
+    bottom_right: "bottom-8 right-4",
     left_center: "top-1/2 left-4 transform -translate-y-1/2",
     right_center: "top-1/2 right-4 transform -translate-y-1/2",
   };
@@ -400,9 +440,13 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeD
     return <>{qrElements}</>;
   };
 
+  
+
+
   return (
     <div className={`w-full h-full bg-transparent flex flex-col`}>
-      <div style={{ height: '70dvh', position: 'relative', flex: '0 0 auto' }}>
+      
+      <div style={{ height: version === "1" ? "100dvh" : "70dvh", position: 'relative', flex: '0 0 auto' }}>
         {isLoading && (
           <div className="absolute inset-0 z-10 bg-white flex items-center justify-center touch-manipulation">
             <img
@@ -448,9 +492,9 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeD
                 />
               </div>
             )} */}
-
-            <QRDisplay qr_links={slide.qr_links} />
-            
+            {version == "1" && (
+              <QRDisplay qr_links={slide.qr_links} />
+            )}
             {isActive && (
               <Canvas
                 key={canvasKey.current}
@@ -510,7 +554,7 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeD
               </Canvas>
             )}
 
-            {animationNames.length > 0 && (
+            {version !== "1" && animationNames.length > 0 && (
               <div
                 style={{
                   position: 'absolute',
@@ -558,7 +602,7 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeD
           </div>
         )}
       </div>
-      
+      {version !== "1" && (
       <div style={{ height: '100dvh', overflowY: 'auto', flex: '0 0 auto' }}>
         <div className="w-full bg-white px-6 py-2 z-20 flex flex-col space-y-4">
           <div className="w-full flex items-center justify-between flex-wrap gap-2">
@@ -609,6 +653,8 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded}: ThreeD
           </p>
         </div>
       </div>
+
+      )}
     </div>
   );
 };
