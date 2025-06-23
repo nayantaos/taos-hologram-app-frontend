@@ -13,6 +13,7 @@ export interface SlideConfig {
   product_name: string;
   price: number;
   Product_description: string;
+  audio_file: string;
 }
 
 export interface qrData {

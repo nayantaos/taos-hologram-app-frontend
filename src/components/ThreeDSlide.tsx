@@ -4,6 +4,8 @@ import { useGLTF, useAnimations, Environment, PresentationControls, Resize, Cont
 import * as THREE from "three";
 import { SlideConfig } from "@/types/slide";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Howl } from 'howler';
+import { trackEvent } from "@/utils/analytics";
 
 interface ModelProps {
   filePath: string;
@@ -102,7 +104,14 @@ const ARViewer = ({ filePath }) => {
             opacity: isModelLoaded ? 1 : 0,
             transition: 'opacity 0.5s ease-in-out',
             zIndex: 20
-          }}>
+          }}
+            onClick={() => {
+          trackEvent({
+            eventName: "NAVIGATION",
+            category: "User Interaction",
+            label: "Left Button",
+          });
+        }}>
             View in your space
           </button>
         )}
@@ -232,7 +241,7 @@ function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoad
 
  
 
-  const playAnimation = (name: string, speed: number = 0.60) => {
+  const playAnimation = (name: string, speed: number = 1) => {
     stopCurrentAction();
     if (actions && actions[name]) {
       actions[name]
@@ -252,6 +261,14 @@ function Model({ filePath, onLoad, onAnnotationOpen, isVisible, onAnimationsLoad
   };
 
   const handlePointerDown = (e: THREE.Event) => {
+    trackEvent({
+      eventName: "MODEL-SELECT HOTSPOT",
+      label: e.object?.name || "unknown",
+      data: {
+        contentType: e.object?.userData?.content_type,
+        position: e.object?.position,
+      },
+    });
     if (e.object?.userData?.clickable) {
       e.stopPropagation();
       const wasVisible = annotations.some(a => a.sprite === e.object && a.visible);
@@ -363,6 +380,70 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
   const [animationNames, setAnimationNames] = useState<string[]>([]);
   const [triggerAnimation, setTriggerAnimation] = useState<(name: string) => void>(() => () => {});
   const canvasKey = useRef(0);
+  const soundRef = useRef<Howl | null>(null); // Add this ref for audio
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
+   const [audioBlocked, setAudioBlocked] = useState(false);
+
+  
+ // Add this effect to click the mute button when model loads
+  useEffect(() => {
+    if (!isLoading && isActive) {
+      const timer = setTimeout(() => {
+        const muteButton = document.querySelector('.mute-unmute') as HTMLButtonElement;
+        if (muteButton) {
+          muteButton.click();
+          console.log('clicked..............'); 
+        }
+      }, 3000); // Small delay to ensure button exists
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isActive]);
+
+
+   // Add this useEffect for audio handling
+  useEffect(() => {
+    if (!isActive || !slide.audio_file) return;
+
+    // Initialize audio
+    soundRef.current = new Howl({
+      src: [slide.audio_file],
+      autoplay: true,
+      loop: true,
+      volume: 0.0,
+      onplayerror: () => {
+        console.error('Error playing audio');
+      },
+      onplay: () => {
+      console.log("Audio started muted.");
+
+        // Optional: Fade in after user interacts
+        setTimeout(() => {
+          soundRef.current?.fade(0.0, 0.5, 1000); // fade to 0.5 volume in 1 second
+        }, 3000); // or after click
+      }
+    });
+
+    // Play audio when slide becomes active
+    soundRef.current.play();
+
+    if (soundRef.current && soundRef.current.mute()) {
+      soundRef.current.mute(false); // Unmute
+      soundRef.current.play();      // Re-play in case needed
+    }
+
+    return () => {
+      // Clean up audio when slide changes or component unmounts
+      if (soundRef.current) {
+        soundRef.current.stop();
+        soundRef.current.unload();
+        soundRef.current = null;
+      }
+    };
+  }, [isActive, slide.audio_file]);
+  
+ 
 
   useEffect(() => {
     return () => {
@@ -445,7 +526,7 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
 
   return (
     <div className={`w-full h-full bg-transparent flex flex-col`}>
-      
+
       <div style={{ height: version === "1" ? "100dvh" : "70dvh", position: 'relative', flex: '0 0 auto' }}>
         {isLoading && (
           <div className="absolute inset-0 z-10 bg-white flex items-center justify-center touch-manipulation">
@@ -462,36 +543,14 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
             <ARViewer filePath={slide.file} />
             <button 
               onClick={() => { setShowAR(false); onAnnotationOpen(false); }}
-              style={{
-                position: 'absolute',
-                bottom: '3%',
-                right: '3%',
-                padding: '6px 12px',
-                background: '#fff',
-                color: '#0062BA',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                textTransform: 'capitalize',
-                fontSize: '14px',
-                border: '1px solid #0062BA',
-                fontFamily: "Albert Sans",
-                zIndex: 20
-              }}
+              className="absolute bottom-[3%] right-[3%] px-3 py-1.5 bg-white text-[#0062BA] rounded-md cursor-pointer capitalize text-sm border border-[#0062BA] font-sans z-20"
+              style={{ fontFamily: "Albert Sans" }}
             >
               Exit AR
             </button>
           </div>
         ) : (
           <div style={{ width: '100%', height: '100%' }}>
-            {/* {isLoading && (
-              <div className="absolute inset-0 z-10 bg-white flex items-center justify-center touch-manipulation">
-                <img
-                  src="/loader/proto-loader.svg"
-                  alt="Loading..."
-                  className="w-[25%] md:w-[10%] animate-pulse"
-                />
-              </div>
-            )} */}
             {version == "1" && (
               <QRDisplay qr_links={slide.qr_links} />
             )}
@@ -501,6 +560,12 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
                 shadows
                 camera={{ position: [-3, 4, 15], fov: isMobile ? 10 : 6 }}
                 gl={{ antialias: true }}
+                onPointerDown={() => onAnnotationOpen?.(true)}
+                onPointerUp={() => onAnnotationOpen?.(false)}
+                onTouchStart={() => onAnnotationOpen?.(true)}
+                onPointerLeave={() => onAnnotationOpen?.(false)}
+                onTouchEnd={() => onAnnotationOpen?.(false)}
+                onTouchCancel={() => onAnnotationOpen?.(false)}
               >
                 <ambientLight intensity={0.5} />
                 <directionalLight
@@ -530,13 +595,27 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
                         onLoad={setIsLoading} 
                         onAnnotationOpen={onAnnotationOpen} 
                         isVisible={isActive} 
-                        onModelLoaded={onModelLoaded}
+                        onModelLoaded={() => {
+                          setModelLoaded(true);
+                          if (onModelLoaded) onModelLoaded();
+                        }}
                         onAnimationsLoaded={(names, play) => {
                           setAnimationNames(names);
                           setTriggerAnimation(() => play);
                         }} 
                       />
-                      <OrbitControls enableZoom={true} enablePan={true} />
+                      <OrbitControls 
+                        enableZoom={true} 
+                        enablePan={true} 
+                        onEnd={(e) => {
+                          trackEvent({
+                            eventName: "MODEL-ZOOM",
+                            label: "Zoom Ended",
+                            data: {
+                              distance: e.target.object.position.distanceTo(new THREE.Vector3(0, 0, 0)),
+                            },
+                          });
+                        }} />
                     </Resize>
                   </Suspense>
                 </PresentationControls>
@@ -555,44 +634,17 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
             )}
 
             {version !== "1" && animationNames.length > 0 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '20px',
-                  zIndex: 20,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(255,255,255,0.85)',
-                }}
-              >
-                <span style={{ 
-                  width: '100%',
-                  color: '#fff',
-                  backgroundColor: '#0063ba',
-                  fontWeight: 600,
-                  borderRadius: '50px',
-                  padding: '5px 10px',
-                  fontFamily: '"Albert Sans", sans-serif'
-                }}>
+              
+              <div className="absolute top-[20px] right-[20px] z-20 flex items-center gap-[8px] bg-white/85">
+                <span className="w-full text-white bg-[#0063ba] font-semibold rounded-full px-2.5 py-1 font-['Albert_Sans']">
                   Animation: 
                 </span>
                 {animationNames.map((name, i) => (
                   <button
                     key={i}
                     onClick={() => triggerAnimation(name)}
-                    style={{
-                      padding: '6px 12px',
-                      background: '#fff',
-                      color: '#0062BA',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      textTransform: 'capitalize',
-                      fontSize: '14px',
-                      border: '1px solid #0062BA',
-                      fontFamily: "Albert Sans",
-                    }}
+                    className="px-3 py-1.5 bg-white text-[#0062BA] rounded-md cursor-pointer capitalize text-sm border border-[#0062BA] font-sans"
+                    style={{ fontFamily: '"Albert Sans", sans-serif' }}
                   >
                     {name}
                   </button>
@@ -610,6 +662,24 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
               {slide.product_name || "Product Title"}
             </h2>
             <div className="flex space-x-3">
+              {!isLoading && (
+                <button
+                  onClick={() => {
+                    if (soundRef.current) {
+                      if (soundRef.current.playing()) {
+                        soundRef.current.stop();
+                      } else {
+                        soundRef.current.play();
+                      }
+                    }
+                    setAudioBlocked(false);
+                  }}
+                  className="absolute top-[calc(70dvh-40px)] right-5 z-[100] px-2 py-1 bg-white text-[#0062BA] rounded border border-[#0062BA] font-sans text-sm cursor-pointer shadow-sm transition-all duration-200 hover:bg-blue-50 mute-unmute"
+                  style={{ fontFamily: '"Albert Sans", sans-serif' }}
+                >
+                {soundRef.current?.playing() ? '🔊 Mute' : '🔇 Unmute'}
+                </button>
+              )} 
               {!isLoading && (
                 <button
                   onClick={() => {setShowAR(true); onAnnotationOpen(true); }} 

@@ -5,6 +5,7 @@ import VideoSlide from "./VideoSlide";
 import NotFound from "@/pages/NotFound";
 import { useModelPreloader } from "@/hooks/use-model-preloader"; // adjust path if needed
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
+import { Howl } from 'howler';
 
 
 const SlidePlayer = ({ slug, version  }) => {
@@ -16,7 +17,7 @@ const SlidePlayer = ({ slug, version  }) => {
   const [error, setError] = useState<string | null>(null);
   const [isPausedByAnnotation, setIsPausedByAnnotation] = useState(false);
   const [isSlideLoading, setIsSlideLoading] = useState<boolean>(true); // 🌟 new
-
+  const soundRef = useRef<Howl | null>(null);
   const autoTimer = useRef<NodeJS.Timeout | null>(null); // ⏲️ External timer ref
 
   useEffect(() => {
@@ -52,6 +53,10 @@ const SlidePlayer = ({ slug, version  }) => {
   const goToPreviousSlide = useCallback(() => {
     if (!config) return;
     clearAutoTimer();
+    if (soundRef.current) {
+      soundRef.current.stop();
+      soundRef.current = null;
+    }
     setCurrentSlideIndex((prevIndex) =>
       prevIndex - 1 < 0 ? config.files.length - 1 : prevIndex - 1
     );
@@ -60,6 +65,10 @@ const SlidePlayer = ({ slug, version  }) => {
   const goToNextSlide = useCallback(() => {
     if (!config) return;
     clearAutoTimer();
+    if (soundRef.current) {
+      soundRef.current.stop();
+      soundRef.current = null;
+    }
     setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % config.files.length);
   }, [config]);
 
@@ -150,13 +159,14 @@ const SlidePlayer = ({ slug, version  }) => {
                 key={`slide-${currentSlideIndex}`}
                 slide={slide}
                 isActive={true}
+                onVideoEnd={goToNextSlide}
               />
             )}
           </div>
         );
       })()}
 
-      {version !== "1" && (
+      {version !== "1" && config.files[currentSlideIndex].type === "3d" && (
         <div
           className={`absolute ${
             version === "1"
@@ -164,6 +174,7 @@ const SlidePlayer = ({ slug, version  }) => {
               : "top-[calc(70dvh-20px)]"
           } left-4 z-50 flex space-x-2`}
         >
+          
           {config.files.map((_, index) => (
             <button
               key={index}
