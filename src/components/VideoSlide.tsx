@@ -10,7 +10,7 @@ interface VideoSlideProps {
 const VideoSlide = ({ slide, isActive, onVideoEnd }: VideoSlideProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.7); // Default volume
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
@@ -41,6 +41,11 @@ const VideoSlide = ({ slide, isActive, onVideoEnd }: VideoSlideProps) => {
         try {
           await video.play();
           console.log("🎬 Video autoplay started");
+
+          // After autoplay starts, unmute and set volume
+          video.muted = false;
+          video.volume = 0.5; // Set desired audio level (0.0 to 1.0)
+          console.log("🔊 Audio level set to 50%");
         } catch (err) {
           console.warn("⚠️ Autoplay failed:", err);
         }

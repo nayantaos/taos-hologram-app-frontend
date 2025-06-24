@@ -1,0 +1,14 @@
+{  
+  "files": 
+  [
+    
+    { "camera_kit_lens_group": "2cb90778-5f8e-4eae-ba1a-a01296ce6c3a", "rotation_time": 8, "type": "camera_kit", "camera_kit_token": "eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwIjoiSldUIn0.eyJhdWQiOiJjYW52YXMtY2FudmFzYXBpIiwiaXNzIjoiY2FudmFzLXMyc3Rva2VuIiwibmJmIjoxNzUwMzU3MTU0LCJzdWIiOiJkZmVhNWYyOS1iNTdkLTQxNDUtYWI4NS1iNWQwYjg1MTE4OGZ-U1RBR0lOR34yODg3ZGE3Mi04YzNiLTQ0MzAtYWU0MC01Mjc4ZmMxN2Q5MzEifQ.L_siRiDzzvsP2z1wtQ3GRzTPrSJi2Q8xvlc5RlT0Jmo"},
+    { "file": "/models/Laptop_annotation.glb", "rotation_time": 8, "type": "3d", "zoom": [90,90] , "wall": [2, 2, 2], "Dlight": [4, 2, 40], "shadow_opacity": 1.15
+    },
+    { "file": "/models/Office_bag_annotation.glb", "rotation_time": 8, "type": "3d", "zoom": [80,80] , "wall": [0.4, 2, -0.4], "Dlight": [4, 2, 10], "shadow_opacity": 0.15
+    },
+    { 
+      "file": "/models/Watch_annotation.glb", "rotation_time": 8, "type": "3d", "zoom": [2,2] , "wall": [0.4, 2, -0.4], "Dlight": [4, 1, 7], "shadow_opacity": 0.2
+    }
+  ]
+}

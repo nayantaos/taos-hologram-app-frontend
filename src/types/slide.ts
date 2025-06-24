@@ -1,5 +1,5 @@
 
-export type SlideType = "3d" | "video";
+export type SlideType = "3d" | "Video";
 
 export interface SlideConfig {
   file: string;
@@ -14,6 +14,8 @@ export interface SlideConfig {
   price: number;
   Product_description: string;
   audio_file: string;
+  camera_kit_token?: string;
+  camera_kit_lens_group?: string;
 }
 
 export interface qrData {

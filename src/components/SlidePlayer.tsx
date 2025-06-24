@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { SlidePlayerConfig } from "@/types/slide";
 import ThreeDSlide from "./ThreeDSlide";
 import VideoSlide from "./VideoSlide";
+import CameraKitSlide from "./CameraKitSlide";
 import NotFound from "@/pages/NotFound";
 import { useModelPreloader } from "@/hooks/use-model-preloader"; // adjust path if needed
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
@@ -23,6 +24,7 @@ const SlidePlayer = ({ slug, version  }) => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
+        //const response = await fetch('/config.json');
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/getfiles?token=${slug}`);
         if (response.status === 404) {
           <NotFound />;
@@ -154,12 +156,19 @@ const SlidePlayer = ({ slug, version  }) => {
                 onModelLoaded={handleModelLoaded}
                 version={version}
               />
-            ) : (
+            ) : slide.type === "Video" ? (
               <VideoSlide
                 key={`slide-${currentSlideIndex}`}
                 slide={slide}
                 isActive={true}
                 onVideoEnd={goToNextSlide}
+              />
+            ) : (
+              <CameraKitSlide
+                key={`slide-${currentSlideIndex}`}
+                slide={slide}
+                isActive={true}
+                onSlideEnd={goToNextSlide}
               />
             )}
           </div>

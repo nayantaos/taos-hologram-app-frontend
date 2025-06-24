@@ -387,19 +387,19 @@ const ThreeDSlide = ({ slide, isActive, onAnnotationOpen, onModelLoaded, version
 
   
  // Add this effect to click the mute button when model loads
-  useEffect(() => {
-    if (!isLoading && isActive) {
-      const timer = setTimeout(() => {
-        const muteButton = document.querySelector('.mute-unmute') as HTMLButtonElement;
-        if (muteButton) {
-          muteButton.click();
-          console.log('clicked..............'); 
-        }
-      }, 3000); // Small delay to ensure button exists
+  // useEffect(() => {
+  //   if (!isLoading && isActive) {
+  //     const timer = setTimeout(() => {
+  //       const muteButton = document.querySelector('.mute-unmute') as HTMLButtonElement;
+  //       if (muteButton) {
+  //         muteButton.click();
+  //         console.log('clicked..............'); 
+  //       }
+  //     }, 3000); // Small delay to ensure button exists
       
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, isActive]);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [isLoading, isActive]);
 
 
    // Add this useEffect for audio handling
